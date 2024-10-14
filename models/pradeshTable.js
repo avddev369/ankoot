@@ -42,7 +42,12 @@ module.exports = (sequelize, Sequelize) => {
             allowNull: false
         }
     });
-    
+
+    pradesh.associate = (models) => {
+        pradesh.hasMany(models.itemAss, { foreignKey: 'pId', as: 'assignedItems' });
+        pradesh.hasMany(models.itemRec, { foreignKey: 'pId', as: 'receivedItems' });
+    };
+
     return pradesh;
 };
 

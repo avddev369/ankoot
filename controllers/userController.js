@@ -42,14 +42,14 @@ exports.registerUser = (req, res) => {
 
 
 exports.login = async (req, res) => {
-    const { username, password } = req.body;
+    const { mobile, password } = req.body;
     try {
         const user = await db.user.findOne({
-            where: { username, password },
+            where: { mobile, password },
         });
 
         if (!user) {
-            return res.status(401).json({ message: 'Invalid username or password' });
+            return res.status(401).json({ message: 'Invalid mobile or password' });
         }
 
         const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
@@ -58,7 +58,7 @@ exports.login = async (req, res) => {
             name: user.name,
             isMaster: user.isMaster,
             mobile: user.mobile,
-            type_id: user.type_id,
+            isLogin: user.isLogin,
             token,
         });
 

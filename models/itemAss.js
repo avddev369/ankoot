@@ -22,7 +22,11 @@ module.exports = (sequelize, Sequelize) => {
             allowNull: false
         }
     });
-    
+    itemAss.associate = (models) => {
+        itemAss.belongsTo(models.pradesh, { foreignKey: 'pId' });
+        itemAss.belongsTo(models.item, { foreignKey: 'itemId' });
+    };
+
     return itemAss;
 };
 

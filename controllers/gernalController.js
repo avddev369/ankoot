@@ -34,7 +34,7 @@ exports.insertData = async (req, res) => {
     } catch (error) {
       myRes.errorResponse(res, error.message);
     }
-  };
+};
 
 exports.updateData = async (req, res) => {
     try {

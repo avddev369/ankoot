@@ -24,6 +24,7 @@ console.log("Synced db.");
 //Routes
 require("./routes/user.routes")(app);
 require("./routes/gernal.routes")(app);
+require("./routes/item.routes")(app);
 
 
 app.get("/", (req, res) => {
