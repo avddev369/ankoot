@@ -4,7 +4,7 @@ const myRes = require("../utils/responseHandler");
 
 
 
-exports.dasboard = async (req, res) => {
+exports.dashboard = async (req, res) => {
     try {
         // Query all Pradesh masters along with total assigned and received items
         const pradeshData = await db.pradesh.findAll({
