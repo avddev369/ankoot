@@ -208,7 +208,7 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
                 {
                     model: db.itemRec,
                     as: 'receivedItems',
-                    attributes: ['itemId', 'createdAt'],
+                    attributes: ['itemId', 'createdAt',],
                     include: [
                         {
                             model: db.item, // Assuming your item table is named 'items'
