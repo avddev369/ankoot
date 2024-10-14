@@ -31,9 +31,15 @@ exports.dashboard = async (req, res) => {
                 [
                     db.Sequelize.literal(`
                         (
-                            SELECT COUNT(*)
+                            SELECT COUNT(DISTINCT received.itemId)
                             FROM itemrecs AS received
                             WHERE received.pId = pradesh_master.pId
+                              AND EXISTS (
+                                  SELECT 1
+                                  FROM itemass_masters AS assigned
+                                  WHERE assigned.pId = pradesh_master.pId
+                                    AND assigned.itemId = received.itemId
+                              )
                         )
                     `),
                     'totalReceived'
