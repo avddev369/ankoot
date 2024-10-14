@@ -6,7 +6,6 @@ const myRes = require("../utils/responseHandler");
 
 exports.dashboard = async (req, res) => {
     try {
-        // Query all Pradesh masters along with total assigned and received items
         const pradeshData = await db.pradesh.findAll({
             attributes: [
                 'pId',
@@ -16,59 +15,45 @@ exports.dashboard = async (req, res) => {
                 'pSantGuj',
                 'area',
                 'contPerson',
-                'contPersonNo'
+                'contPersonNo',
+                // Subquery for total assigned items
+                [
+                    db.Sequelize.literal(`
+                        (
+                            SELECT COUNT(*)
+                            FROM itemass_masters AS assigned
+                            WHERE assigned.pId = pradesh_master.pId
+                        )
+                    `),
+                    'totalAssigned'
+                ],
+                // Subquery for total received items
+                [
+                    db.Sequelize.literal(`
+                        (
+                            SELECT COUNT(*)
+                            FROM itemrecs AS received
+                            WHERE received.pId = pradesh_master.pId
+                        )
+                    `),
+                    'totalReceived'
+                ]
             ],
-            include: [
-                {
-                    model: db.itemAss,
-                    as: 'assignedItems',
-                    attributes: [
-                        [db.Sequelize.fn('COUNT', db.Sequelize.col('assignedItems.itemAssId')), 'totalAssigned']
-                    ]
-                },
-                {
-                    model: db.itemRec,
-                    as: 'receivedItems',
-                    attributes: [
-                        [db.Sequelize.fn('COUNT', db.Sequelize.col('receivedItems.itemRecId')), 'totalReceived']
-                    ]
-                }
-            ],
-            group: ['pradesh_master.pId']
+            raw: true, // Fetch plain JavaScript objects
         });
-    
-        // Flatten the nested structure to bring counts to the top level
-        const flattenedData = pradeshData.map(pradesh => {
-            const totalAssigned = pradesh.assignedItems[0]?.dataValues.totalAssigned || 0;
-            const totalReceived = pradesh.receivedItems[0]?.dataValues.totalReceived || 0;
-    
-            // Return a flat object with all necessary fields
-            return {
-                pId: pradesh.pId,
-                newNameEng: pradesh.newNameEng,
-                newNameGuj: pradesh.newNameGuj,
-                pSantEng: pradesh.pSantEng,
-                pSantGuj: pradesh.pSantGuj,
-                area: pradesh.area,
-                contPerson: pradesh.contPerson,
-                contPersonNo: pradesh.contPersonNo,
-                totalAssigned,
-                totalReceived
-            };
-        });
-    
+
         return res.status(200).json({
             status: 'success',
-            data: flattenedData
+            data: pradeshData
         });
-    
+
     } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error('Error fetching dashboard data:', error);
         return res.status(500).json({
             status: 'error',
             message: 'Something went wrong while fetching dashboard data.'
         });
-    }    
+    }
 };
 
 exports.assignItemToPradesh = async (req, res) => {
