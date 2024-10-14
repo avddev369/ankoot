@@ -1,6 +1,5 @@
-const jwt = require('jsonwebtoken');
 const db = require("../models");
-const myRes = require("../utils/responseHandler");
+const ExcelJS = require('exceljs');
 
 
 
@@ -196,6 +195,83 @@ exports.getPradeshItemsDetails = async (req, res) => {
         return res.status(500).json({
             status: 'error',
             message: 'Something went wrong while fetching Pradesh items details'
+        });
+    }
+};
+
+exports.downloadPradeshReceivedItems = async (req, res) => {
+    try {
+        // Step 1: Fetch all Pradesh data with received items and item names
+        const pradeshData = await db.pradesh.findAll({
+            attributes: ['pId', 'newNameEng', 'pSantEng', 'contPerson', 'contPersonNo'],
+            include: [
+                {
+                    model: db.itemRec,
+                    as: 'receivedItems',
+                    attributes: ['itemId', 'createdAt'],
+                    include: [
+                        {
+                            model: db.item, // Assuming your item table is named 'items'
+                            as: 'itemDetails',
+                            attributes: ['nameEng','nameGuj'] // Fetch the item name
+                        }
+                    ]
+                }
+            ]
+        });
+
+        // Step 2: Create a new Excel workbook and worksheet
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Pradesh Received Items');
+
+        // Step 3: Define columns for the worksheet
+        worksheet.columns = [
+            { header: 'Pradesh ID', key: 'pId', width: 15 },
+            { header: 'Pradesh Name', key: 'newNameEng', width: 30 },
+            { header: 'Sant Name', key: 'pSantEng', width: 25 },
+            { header: 'Contact Person', key: 'contPerson', width: 25 },
+            { header: 'Contact No', key: 'contPersonNo', width: 15 },
+            // { header: 'Item ID', key: 'itemId', width: 15 },
+            { header: 'Item Eng', key: 'nameEng', width: 25 },
+            { header: 'Item Guj', key: 'nameGuj', width: 25 },
+            { header: 'Received Date', key: 'receivedDate', width: 20 }
+        ];
+
+        // Step 4: Populate the worksheet with data
+        pradeshData.forEach(pradesh => {
+            pradesh.receivedItems.forEach(item => {
+                worksheet.addRow({
+                    pId: pradesh.pId,
+                    newNameEng: pradesh.newNameEng,
+                    pSantEng: pradesh.pSantEng,
+                    contPerson: pradesh.contPerson,
+                    contPersonNo: pradesh.contPersonNo,
+                    itemId: item.itemId,
+                    nameEng: item.itemDetails?.nameEng || 'N/A', // Use item name from association
+                    nameGuj: item.itemDetails?.nameGuj || 'N/A', // Use item name from association
+                    receivedDate: item.createdAt.toISOString().split('T')[0] // Format date to YYYY-MM-DD
+                });
+            });
+        });
+
+        // Step 5: Set response headers to trigger Excel download
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename="Pradesh_Received_Items.xlsx"'
+        );
+
+        // Step 6: Write the workbook to the response stream
+        await workbook.xlsx.write(res);
+        res.end(); // End the response after streaming the file
+    } catch (error) {
+        console.error('Error generating Excel file:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Something went wrong while generating the Excel file.'
         });
     }
 };

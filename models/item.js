@@ -23,6 +23,23 @@ module.exports = (sequelize, Sequelize) => {
         }
     });
     
+    module.exports = (sequelize, DataTypes) => {
+        const item = sequelize.define('items', {
+            // Define your model attributes
+            itemName: {
+                type: DataTypes.STRING,
+                allowNull: false
+            },
+            // Other attributes
+        });
+    
+        item.associate = (models) => {
+            item.hasMany(models.itemRec, {
+                foreignKey: 'itemId', // Adjust if your foreign key has a different name
+                as: 'receivedItems'
+            });
+        };
+    }
     return item;
 };
 

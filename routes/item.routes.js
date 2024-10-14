@@ -6,6 +6,7 @@ module.exports = app => {
     router.post("/dashboard", item.dashboard);
     router.post("/assignItemToPradesh", item.assignItemToPradesh);
     router.post("/getPradeshItemsDetails", item.getPradeshItemsDetails);
+    router.post("/downloadPradeshReceivedItems", item.downloadPradeshReceivedItems);
     
     app.use("/", router);
 };

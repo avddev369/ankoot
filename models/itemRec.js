@@ -35,6 +35,13 @@ module.exports = (sequelize, Sequelize) => {
         }
     });
     
+    itemRec.associate = (models) => {
+        itemRec.belongsTo(models.item, {
+            foreignKey: 'itemId', // Adjust if your foreign key has a different name
+            as: 'itemDetails'
+        });
+    };
+    
     return itemRec;
 };
 
