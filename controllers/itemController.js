@@ -109,7 +109,7 @@ exports.assignItemToPradesh = async (req, res) => {
 
 exports.getPradeshItemsDetails = async (req, res) => {
     try {
-        // Step 1: Get pradeshId from request parameters
+        // Step 1: Get pradeshId from request body
         const { pradeshId } = req.body;
 
         // Step 2: Fetch specified Pradesh data
@@ -154,9 +154,9 @@ exports.getPradeshItemsDetails = async (req, res) => {
             return acc;
         }, {});
 
-        // Step 6: Fetch item details for all assigned items
+        // Step 6: Fetch item details including the unit
         const items = await db.item.findAll({
-            attributes: ['itemId', 'nameEng', 'nameGuj'],
+            attributes: ['itemId', 'nameEng', 'nameGuj', 'unit'], // Fetch unit as well
             where: {
                 itemId: assignedItems.map(item => item.itemId)
             },
@@ -174,7 +174,8 @@ exports.getPradeshItemsDetails = async (req, res) => {
                 totalAssigned: assigned.totalAssigned,
                 totalReceived,
                 nameEng: item.nameEng,
-                nameGuj: item.nameGuj
+                nameGuj: item.nameGuj,
+                unit: item.unit // Include unit in the response
             };
         });
 
