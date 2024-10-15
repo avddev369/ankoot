@@ -8,6 +8,29 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
+
+const allowedOrigins = [
+    'http://27.116.52.24:8054',
+  ];
+  
+  app.use(cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        // If the origin is in the allowedOrigins list, allow it
+        callback(null, true);
+      } else {
+        // If not, block the request
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed methods
+    allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+  }));
+    
+  
 //Database
 const db = require("./models");
 
