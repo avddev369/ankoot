@@ -5,6 +5,10 @@ module.exports = (sequelize, Sequelize) => {
             primaryKey: true,
             autoIncrement: true
         },
+        pId: {
+            type: Sequelize.INTEGER,
+            allowNull: false
+        },
         itemName: {
             type: Sequelize.STRING,  
             allowNull: false
@@ -28,6 +32,10 @@ module.exports = (sequelize, Sequelize) => {
         remark: {
             type: Sequelize.STRING,
             allowNull: false
+        },
+        unit: {
+            type: Sequelize.STRING,
+            allowNull: true
         }
     });
 

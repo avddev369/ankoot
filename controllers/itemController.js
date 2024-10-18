@@ -28,11 +28,15 @@ exports.dashboard = async (req, res) => {
                     `),
                     'totalAssigned'
                 ],
-                // Subquery for total received items
+                // Subquery for total received items, including "other" items
                 [
                     db.Sequelize.literal(`
                         (
-                            SELECT COUNT(DISTINCT received.itemId)
+                            SELECT 
+                                COUNT(DISTINCT received.itemId) + 
+                                (SELECT COUNT(*) 
+                                 FROM others 
+                                 WHERE others.pId = pradesh_master.pId)
                             FROM itemrecs AS received
                             WHERE received.pId = pradesh_master.pId
                               AND EXISTS (
@@ -120,7 +124,6 @@ exports.getPradeshItemsDetails = async (req, res) => {
             raw: true
         });
 
-        // Check if pradeshData is found
         if (!pradeshData) {
             return res.status(404).json({
                 status: 'error',
@@ -128,44 +131,49 @@ exports.getPradeshItemsDetails = async (req, res) => {
             });
         }
 
-        // Step 3: Fetch assigned items with totals grouped by pId and itemId
+        // Step 3: Fetch assigned items with totals
         const assignedItems = await db.itemAss.findAll({
             attributes: [
                 'itemId',
                 [db.sequelize.fn('SUM', db.sequelize.col('qty')), 'totalAssigned']
             ],
-            where: { pId: pradeshId }, // Filter by pradeshId
+            where: { pId: pradeshId },
             group: ['itemId'],
             raw: true
         });
 
-        // Step 4: Fetch received items with totals grouped by itemId
+        // Step 4: Fetch received items with totals
         const receivedItems = await db.itemRec.findAll({
             attributes: [
                 'itemId',
                 [db.sequelize.fn('SUM', db.sequelize.col('qty')), 'totalReceived']
             ],
-            where: { pId: pradeshId }, // Filter by pradeshId
+            where: { pId: pradeshId },
             group: ['itemId'],
             raw: true
         });
 
-        // Step 5: Create a dictionary for received items
         const receivedDict = receivedItems.reduce((acc, item) => {
             acc[item.itemId] = item.totalReceived;
             return acc;
         }, {});
 
-        // Step 6: Fetch item details including the unit
+        // Step 5: Fetch item details (regular items)
         const items = await db.item.findAll({
-            attributes: ['itemId', 'nameEng', 'nameGuj', 'unit'], // Fetch unit as well
+            attributes: ['itemId', 'nameEng', 'nameGuj', 'unit'],
             where: {
                 itemId: assignedItems.map(item => item.itemId)
             },
             raw: true
         });
 
-        // Step 7: Combine data to reflect left outer join
+        // Step 6: Fetch 'other' items for the Pradesh
+        const otherItems = await db.other.findAll({
+            where: { pId: pradeshId },
+            raw: true
+        });
+
+        // Step 7: Map regular items with their details
         const itemsWithDetails = items.map(item => {
             const assigned = assignedItems.find(a => a.itemId === item.itemId) || { totalAssigned: 0 };
             const totalReceived = receivedDict[item.itemId] || 0;
@@ -177,17 +185,33 @@ exports.getPradeshItemsDetails = async (req, res) => {
                 totalReceived,
                 nameEng: item.nameEng,
                 nameGuj: item.nameGuj,
-                unit: item.unit // Include unit in the response
+                unit: item.unit,
+                isOther: false // Regular item flag
             };
         });
 
-        // Step 8: Combine Pradesh data and items
+        // Step 8: Map 'other' items with their details
+        const otherItemsWithDetails = otherItems.map(other => ({
+            pId: pradeshData.pId,
+            itemId: null, // No itemId in 'other'
+            totalAssigned: "0",
+            totalReceived: other.qty,
+            nameEng: other.itemName, // Assuming 'itemName' holds the name in 'other'
+            nameGuj: other.itemName, // Same for Gujarati name if available
+            unit: other.unit, // Or any default value
+            isOther: true // Flag for 'other' items
+        }));
+
+        // Step 9: Combine both regular and 'other' items
+        const allItems = [...itemsWithDetails, ...otherItemsWithDetails];
+
+        // Step 10: Combine Pradesh data and items
         const finalData = {
             ...pradeshData,
-            items: itemsWithDetails
+            items: allItems
         };
 
-        // Step 9: Send the response
+        // Step 11: Send the response
         return res.status(200).json({
             status: 'success',
             data: finalData
@@ -280,7 +304,7 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
 };
 
 exports.addReceiveItem = async (req, res) => {
-    const { pId, dePerson, dePerCont, reference, remark, items } = req.body;
+    const { pId, dePerson, dePerCont, reference, remark, items, unit} = req.body;
 
     if (!pId || !dePerson || !dePerCont || !reference || !Array.isArray(items)) {
         return res.status(400).json({
@@ -299,12 +323,14 @@ exports.addReceiveItem = async (req, res) => {
             if (item.isOther) {
                 // Add to `other` table entries if item is marked as "other"
                 otherEntries.push({
+                    pId,
                     itemName: item.itemName,
                     qty: item.qty,
                     dePerson,
                     dePerCont,
                     reference,
-                    remark
+                    remark,
+                    unit
                 });
             } else {
                 // Add to `itemRec` table entries for existing items
