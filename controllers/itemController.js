@@ -10,6 +10,8 @@ exports.dashboard = async (req, res) => {
                 'pId',
                 'newNameEng',
                 'newNameGuj',
+                'lastNameEng',
+                'lastNameGuj',
                 'pSantEng',
                 'pSantGuj',
                 'area',
@@ -273,6 +275,45 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
         res.status(500).json({
             status: 'error',
             message: 'Something went wrong while generating the Excel file.'
+        });
+    }
+};
+
+exports.addReceiveItem = async (req, res) => {
+    const { pId, dePerson, dePerCont, reference, remark, items } = req.body;
+
+    // Validate request payload
+    if (!pId || !dePerson || !dePerCont || !reference || !items || !Array.isArray(items)) {
+        return res.status(400).json({
+            status: 'error',
+            message: 'Invalid input. Please provide all required fields.'
+        });
+    }
+
+    try {
+        // Prepare bulk entries
+        const entries = items.map(item => ({
+            pId,
+            itemId: item.itemId,
+            qty: item.qty,
+            dePerson,
+            dePerCont,
+            reference,
+            remark
+        }));
+
+        // Insert all entries in a single transaction
+        await db.itemRec.bulkCreate(entries);
+
+        return res.status(201).json({
+            status: 'success',
+            message: 'Items received successfully.'
+        });
+    } catch (error) {
+        console.error('Error adding received items:', error);
+        return res.status(500).json({
+            status: 'error',
+            message: 'Something went wrong while adding received items.'
         });
     }
 };

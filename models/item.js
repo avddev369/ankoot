@@ -39,6 +39,13 @@ module.exports = (sequelize, Sequelize) => {
                 as: 'receivedItems'
             });
         };
+
+        item.associate = (models) => {
+            item.hasMany(models.other, {
+                foreignKey: 'itemId', // Adjust if your foreign key has a different name
+                as: 'otherReceivedItems'
+            });
+        };
     }
     return item;
 };
