@@ -1,16 +1,12 @@
 module.exports = (sequelize, Sequelize) => {
-    const itemRec = sequelize.define('other', {
+    const other = sequelize.define('other', {
         otherId: {
             type: Sequelize.INTEGER,
             primaryKey: true,
             autoIncrement: true
         },
-        itemId: {
-            type: Sequelize.INTEGER,
-            allowNull: false
-        },
-        pId: {
-            type: Sequelize.INTEGER,
+        itemName: {
+            type: Sequelize.STRING,  
             allowNull: false
         },
         qty: {
@@ -34,15 +30,6 @@ module.exports = (sequelize, Sequelize) => {
             allowNull: false
         }
     });
-    
-    itemRec.associate = (models) => {
-        itemRec.belongsTo(models.item, {
-            foreignKey: 'itemId', 
-            as: 'itemDetails'
-        });
-    };
-    
-    return itemRec;
+
+    return other;
 };
-
-

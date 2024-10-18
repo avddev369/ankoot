@@ -282,8 +282,7 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
 exports.addReceiveItem = async (req, res) => {
     const { pId, dePerson, dePerCont, reference, remark, items } = req.body;
 
-    // Validate request payload
-    if (!pId || !dePerson || !dePerCont || !reference || !items || !Array.isArray(items)) {
+    if (!pId || !dePerson || !dePerCont || !reference || !Array.isArray(items)) {
         return res.status(400).json({
             status: 'error',
             message: 'Invalid input. Please provide all required fields.'
@@ -291,19 +290,45 @@ exports.addReceiveItem = async (req, res) => {
     }
 
     try {
-        // Prepare bulk entries
-        const entries = items.map(item => ({
-            pId,
-            itemId: item.itemId,
-            qty: item.qty,
-            dePerson,
-            dePerCont,
-            reference,
-            remark
-        }));
+        // Array for entries in both `itemRec` and `other` tables
+        const itemRecEntries = [];
+        const otherEntries = [];
 
-        // Insert all entries in a single transaction
-        await db.itemRec.bulkCreate(entries);
+        // Process each item in the request
+        items.forEach(item => {
+            if (item.isOther) {
+                // Add to `other` table entries if item is marked as "other"
+                otherEntries.push({
+                    itemName: item.itemName,
+                    qty: item.qty,
+                    dePerson,
+                    dePerCont,
+                    reference,
+                    remark
+                });
+            } else {
+                // Add to `itemRec` table entries for existing items
+                itemRecEntries.push({
+                    pId,
+                    itemId: item.itemId,
+                    qty: item.qty,
+                    dePerson,
+                    dePerCont,
+                    reference,
+                    remark
+                });
+            }
+        });
+
+        // Insert records into `itemRec` if any exist
+        if (itemRecEntries.length) {
+            await db.itemRec.bulkCreate(itemRecEntries);
+        }
+
+        // Insert records into `other` if any exist
+        if (otherEntries.length) {
+            await db.other.bulkCreate(otherEntries);
+        }
 
         return res.status(201).json({
             status: 'success',
