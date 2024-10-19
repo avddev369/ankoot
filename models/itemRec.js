@@ -27,11 +27,11 @@ module.exports = (sequelize, Sequelize) => {
         },
         reference: {
             type: Sequelize.STRING,
-            allowNull: false
+            allowNull: true
         },
         remark: {
             type: Sequelize.STRING,
-            allowNull: false
+            allowNull: true
         }
     });
     

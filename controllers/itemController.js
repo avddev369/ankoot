@@ -17,7 +17,7 @@ exports.dashboard = async (req, res) => {
                 'area',
                 'contPerson',
                 'contPersonNo',
-                // Subquery for total assigned items
+                // Subquery for total assigned quantity
                 [
                     db.Sequelize.literal(`
                         (
@@ -26,17 +26,13 @@ exports.dashboard = async (req, res) => {
                             WHERE assigned.pId = pradesh_master.pId
                         )
                     `),
-                    'totalAssigned'
+                    'totalAssignedQty'
                 ],
-                // Subquery for total received items, including "other" items
+                // Subquery for total received quantity
                 [
                     db.Sequelize.literal(`
                         (
-                            SELECT 
-                                COUNT(DISTINCT received.itemId) + 
-                                (SELECT COUNT(*) 
-                                 FROM others 
-                                 WHERE others.pId = pradesh_master.pId)
+                            SELECT COUNT(*)
                             FROM itemrecs AS received
                             WHERE received.pId = pradesh_master.pId
                               AND EXISTS (
@@ -47,7 +43,41 @@ exports.dashboard = async (req, res) => {
                               )
                         )
                     `),
-                    'totalReceived'
+                    'totalReceivedQty'
+                ],
+                // Subquery for percentage calculation
+                [
+                    db.Sequelize.literal(`
+                        (
+                            SELECT 
+                                CASE 
+                                    WHEN (SELECT SUM(assigned.qty) 
+                                          FROM itemass_masters AS assigned 
+                                          WHERE assigned.pId = pradesh_master.pId) = 0
+                                    THEN 0
+                                    ELSE 
+                                        ROUND(
+                                            (
+                                                (SELECT SUM(received.qty) 
+                                                 FROM itemrecs AS received 
+                                                 WHERE received.pId = pradesh_master.pId
+                                                   AND EXISTS (
+                                                       SELECT 1 
+                                                       FROM itemass_masters AS assigned 
+                                                       WHERE assigned.pId = pradesh_master.pId 
+                                                         AND assigned.itemId = received.itemId
+                                                   )
+                                                ) * 100.0
+                                            ) / 
+                                            (SELECT SUM(assigned.qty) 
+                                             FROM itemass_masters AS assigned 
+                                             WHERE assigned.pId = pradesh_master.pId),
+                                            2
+                                        )
+                                END
+                        )
+                    `),
+                    'receivedPercentage'
                 ]
             ],
             raw: true, // Fetch plain JavaScript objects
@@ -326,11 +356,11 @@ exports.addReceiveItem = async (req, res) => {
                     pId,
                     itemName: item.itemName,
                     qty: item.qty,
+                    unit: item.unit,
                     dePerson,
                     dePerCont,
                     reference,
                     remark,
-                    unit
                 });
             } else {
                 // Add to `itemRec` table entries for existing items
