@@ -334,7 +334,7 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
 };
 
 exports.addReceiveItem = async (req, res) => {
-    const { pId, dePerson, dePerCont, reference, remark, items, unit} = req.body;
+    const { pId, dePerson, dePerCont, reference, remark, items, unit, createdBy} = req.body;
 
     if (!pId || !dePerson || !dePerCont || !reference || !Array.isArray(items)) {
         return res.status(400).json({
@@ -361,6 +361,7 @@ exports.addReceiveItem = async (req, res) => {
                     dePerCont,
                     reference,
                     remark,
+                    createdBy,
                 });
             } else {
                 // Add to `itemRec` table entries for existing items
@@ -371,7 +372,8 @@ exports.addReceiveItem = async (req, res) => {
                     dePerson,
                     dePerCont,
                     reference,
-                    remark
+                    remark,
+                    createdBy
                 });
             }
         });
