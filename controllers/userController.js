@@ -52,9 +52,9 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid mobile or password' });
         }
 
-        const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);
+        const token = jwt.sign({ id: user.userId }, process.env.JWT_SECRET);
         myRes.successResponse(res, {
-            id: user.id,
+            id: user.userId,
             name: user.name,
             isMaster: user.isMaster,
             mobile: user.mobile,

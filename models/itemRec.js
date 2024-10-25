@@ -44,6 +44,12 @@ module.exports = (sequelize, Sequelize) => {
             foreignKey: 'itemId', // Adjust if your foreign key has a different name
             as: 'itemDetails'
         });
+
+        itemRec.belongsTo(models.user, {
+            foreignKey: 'createdBy', // Adjust if your foreign key has a different name
+            as: 'createdByname'
+        });
+        
     };
     
     return itemRec;

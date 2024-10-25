@@ -33,6 +33,10 @@ module.exports = (sequelize, Sequelize) => {
             type: Sequelize.STRING,
             allowNull: true
         },
+        createdBy: {
+            type: Sequelize.INTEGER,
+            allowNull: true
+        },
         unit: {
             type: Sequelize.STRING,
             allowNull: true
