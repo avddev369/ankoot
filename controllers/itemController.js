@@ -258,43 +258,40 @@ exports.getPradeshItemsDetails = async (req, res) => {
 
 exports.downloadPradeshReceivedItems = async (req, res) => {
     try {
-        // Step 1: Fetch all Pradesh data with received items and item names
         const pradeshData = await db.pradesh.findAll({
             attributes: ['pId', 'lastNameEng', 'pSantEng', 'contPerson', 'contPersonNo'],
             include: [
                 {
                     model: db.itemRec,
                     as: 'receivedItems',
-                    attributes: ['itemId', 'qty', 'createdAt', 'dePerson', 'dePerCont', 'reference', 'remark'],
+                    attributes: ['qty', 'createdAt', 'dePerson', 'dePerCont', 'reference', 'remark', 'createdBy'],
                     include: [
                         {
-                            model: db.item, 
+                            model: db.item,
                             as: 'itemDetails',
-                            attributes: ['nameEng', 'nameGuj'] 
+                            attributes: ['nameEng', 'nameGuj', 'unit']
                         },
                         {
-                            model: db.user, 
-                            as: 'createdByname', 
-                            attributes: ['name'] 
+                            model: db.user,
+                            as: 'createdByname',
+                            attributes: ['name']
                         }
                     ]
                 }
             ]
         });
 
-        // Step 2: Create a new Excel workbook and worksheet
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Pradesh Received Items');
 
-        // Step 3: Define columns for the worksheet
         worksheet.columns = [
-            { header: 'Pradesh ID', key: 'pId', width: 15 },
             { header: 'Pradesh Name', key: 'lastNameEng', width: 30 },
             { header: 'Sant Name', key: 'pSantEng', width: 25 },
             { header: 'Contact Person', key: 'contPerson', width: 25 },
             { header: 'Contact No', key: 'contPersonNo', width: 15 },
             { header: 'Item Name (Eng)', key: 'nameEng', width: 25 },
             { header: 'Item Name (Guj)', key: 'nameGuj', width: 25 },
+            { header: 'Unit', key: 'unit', width: 15 },
             { header: 'Quantity', key: 'qty', width: 15 },
             { header: 'Received Date', key: 'receivedDate', width: 20 },
             { header: 'Delivered By', key: 'dePerson', width: 25 },
@@ -304,9 +301,8 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
             { header: 'Created By', key: 'createdByname', width: 25 }
         ];
 
-        // Step 4: Populate the worksheet with data
-        pradeshData.forEach(pradesh => {
-            pradesh.receivedItems.forEach(item => {
+        pradeshData.forEach((pradesh) => {
+            pradesh.receivedItems.forEach((item) => {
                 worksheet.addRow({
                     pId: pradesh.pId,
                     lastNameEng: pradesh.lastNameEng,
@@ -315,30 +311,26 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
                     contPersonNo: pradesh.contPersonNo,
                     nameEng: item.itemDetails?.nameEng || 'N/A',
                     nameGuj: item.itemDetails?.nameGuj || 'N/A',
-                    qty: item.qty,
-                    receivedDate: item.createdAt.toISOString().split('T')[0],
+                    unit: item.itemDetails?.unit || 'N/A',
+                    qty: item.qty || 'N/A',
+                    receivedDate: item.createdAt?.toISOString().split('T')[0] || 'N/A',
                     dePerson: item.dePerson || 'N/A',
                     dePerCont: item.dePerCont || 'N/A',
                     reference: item.reference || 'N/A',
                     remark: item.remark || 'N/A',
-                    createdBy: item.createdBy?.name || 'N/A'
+                    createdByname: item.createdByname?.name || 'N/A'
                 });
             });
         });
 
-        // Step 5: Set response headers to trigger Excel download
-        res.setHeader(
-            'Content-Type',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        );
-        res.setHeader(
-            'Content-Disposition',
-            'attachment; filename="Pradesh_Received_Items.xlsx"'
-        );
+        // Set response headers for Excel file download
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename="Pradesh_Received_Items.xlsx"');
 
-        // Step 6: Write the workbook to the response stream
+        // Write workbook directly to the response
         await workbook.xlsx.write(res);
-        res.end(); // End the response after streaming the file
+        res.end();  // Ensure the response is properly closed
+
     } catch (error) {
         console.error('Error generating Excel file:', error);
         res.status(500).json({
@@ -348,8 +340,9 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
     }
 };
 
+
 exports.addReceiveItem = async (req, res) => {
-    const { pId, dePerson, dePerCont, reference, remark, items, unit, createdBy} = req.body;
+    const { pId, dePerson, dePerCont, reference, remark, items, unit, createdBy } = req.body;
 
     if (!pId || !dePerson || !dePerCont || !reference || !Array.isArray(items)) {
         return res.status(400).json({
