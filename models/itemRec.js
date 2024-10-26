@@ -49,6 +49,11 @@ module.exports = (sequelize, Sequelize) => {
             foreignKey: 'createdBy', // Adjust if your foreign key has a different name
             as: 'createdByname'
         });
+
+        itemRec.belongsTo(models.pradesh, {
+            foreignKey: 'pId', // Adjust if your foreign key has a different name
+            as: 'received'
+        });
         
     };
     
