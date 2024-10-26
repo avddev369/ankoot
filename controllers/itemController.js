@@ -260,17 +260,22 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
     try {
         // Step 1: Fetch all Pradesh data with received items and item names
         const pradeshData = await db.pradesh.findAll({
-            attributes: ['pId', 'newNameEng', 'pSantEng', 'contPerson', 'contPersonNo'],
+            attributes: ['pId', 'lastNameEng', 'pSantEng', 'contPerson', 'contPersonNo'],
             include: [
                 {
                     model: db.itemRec,
                     as: 'receivedItems',
-                    attributes: ['itemId', 'createdAt',],
+                    attributes: ['itemId', 'qty', 'createdAt', 'dePerson', 'dePerCont', 'reference', 'remark'],
                     include: [
                         {
-                            model: db.item, // Assuming your item table is named 'items'
+                            model: db.item, 
                             as: 'itemDetails',
-                            attributes: ['nameEng','nameGuj'] // Fetch the item name
+                            attributes: ['nameEng', 'nameGuj'] 
+                        },
+                        {
+                            model: db.user, 
+                            as: 'createdByname', 
+                            attributes: ['name'] 
                         }
                     ]
                 }
@@ -284,14 +289,19 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
         // Step 3: Define columns for the worksheet
         worksheet.columns = [
             { header: 'Pradesh ID', key: 'pId', width: 15 },
-            { header: 'Pradesh Name', key: 'newNameEng', width: 30 },
+            { header: 'Pradesh Name', key: 'lastNameEng', width: 30 },
             { header: 'Sant Name', key: 'pSantEng', width: 25 },
             { header: 'Contact Person', key: 'contPerson', width: 25 },
             { header: 'Contact No', key: 'contPersonNo', width: 15 },
-            // { header: 'Item ID', key: 'itemId', width: 15 },
-            { header: 'Item Eng', key: 'nameEng', width: 25 },
-            { header: 'Item Guj', key: 'nameGuj', width: 25 },
-            { header: 'Received Date', key: 'receivedDate', width: 20 }
+            { header: 'Item Name (Eng)', key: 'nameEng', width: 25 },
+            { header: 'Item Name (Guj)', key: 'nameGuj', width: 25 },
+            { header: 'Quantity', key: 'qty', width: 15 },
+            { header: 'Received Date', key: 'receivedDate', width: 20 },
+            { header: 'Delivered By', key: 'dePerson', width: 25 },
+            { header: 'Contact', key: 'dePerCont', width: 15 },
+            { header: 'Reference', key: 'reference', width: 20 },
+            { header: 'Remarks', key: 'remark', width: 30 },
+            { header: 'Created By', key: 'createdByname', width: 25 }
         ];
 
         // Step 4: Populate the worksheet with data
@@ -299,14 +309,19 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
             pradesh.receivedItems.forEach(item => {
                 worksheet.addRow({
                     pId: pradesh.pId,
-                    newNameEng: pradesh.newNameEng,
+                    lastNameEng: pradesh.lastNameEng,
                     pSantEng: pradesh.pSantEng,
                     contPerson: pradesh.contPerson,
                     contPersonNo: pradesh.contPersonNo,
-                    itemId: item.itemId,
-                    nameEng: item.itemDetails?.nameEng || 'N/A', // Use item name from association
-                    nameGuj: item.itemDetails?.nameGuj || 'N/A', // Use item name from association
-                    receivedDate: item.createdAt.toISOString().split('T')[0] // Format date to YYYY-MM-DD
+                    nameEng: item.itemDetails?.nameEng || 'N/A',
+                    nameGuj: item.itemDetails?.nameGuj || 'N/A',
+                    qty: item.qty,
+                    receivedDate: item.createdAt.toISOString().split('T')[0],
+                    dePerson: item.dePerson || 'N/A',
+                    dePerCont: item.dePerCont || 'N/A',
+                    reference: item.reference || 'N/A',
+                    remark: item.remark || 'N/A',
+                    createdBy: item.createdBy?.name || 'N/A'
                 });
             });
         });
