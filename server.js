@@ -10,7 +10,7 @@ app.use(cors());
 
 
 const allowedOrigins = [
-    'http://27.116.52.24:8054',
+    'http://27.116.52.24:8053',
     'http://localhost:8053'
   ];
   
