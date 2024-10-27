@@ -490,7 +490,7 @@ exports.report = async (req, res) => {
 
 exports.addParabhaktiItems = async (req, res) => {
   const { items, createdBy } = req.body;
-console.log(req.body)
+  console.log(req.body)
   // Validate required input
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({
@@ -592,6 +592,137 @@ exports.getParabhakti = async (req, res) => {
     return res.status(500).json({
       status: 'error',
       message: 'Something went wrong while fetching data.',
+    });
+  }
+};
+
+exports.parabhaktiReport = async (req, res) => {
+  try {
+    const parabhaktiData = await db.parabhakti.findAll({
+      attributes: [
+        "itemRecId",
+        "qty",
+        "choki",
+        "sender",
+        "unit",
+        "remark",
+        "createdBy",
+        "createdAt"
+      ],
+      include: [
+        {
+          model: db.itemAssParabhakti,
+          as: "itemDetails",
+          attributes: ["itemName"],
+        },
+        {
+          model: db.user,
+          as: "createdByname",
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    // Flatten the data for easy access
+    const flattenedData = parabhaktiData.map((record) => {
+      const createdByname = record.createdByname ? record.createdByname.name : null;
+      return {
+        ...record.toJSON(), // Convert Sequelize model instance to plain object
+        createdByname,
+      };
+    });
+
+    return res.status(201).json({
+      status: "success",
+      message: "Parabhakti items retrieved successfully.",
+      data: parabhaktiData,
+    });
+  } catch (error) {
+    console.error("Error retrieving Parabhakti report:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Something went wrong while retrieving the Parabhakti report.",
+    });
+  }
+};
+
+exports.downloadParabhaktiReport = async (req, res) => {
+  try {
+    const parabhaktiData = await db.parabhakti.findAll({
+      attributes: [
+        "itemRecId",
+        "qty",
+        "choki",
+        "sender",
+        "unit",
+        "remark",
+        "createdBy",
+        "createdAt"
+      ],
+      include: [
+        {
+          model: db.itemAssParabhakti,
+          as: "itemDetails",
+          attributes: ["itemName"], // Ensure itemName is included
+        },
+        {
+          model: db.user,
+          as: "createdByname",
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    // Initialize the workbook and worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Parabhakti Report");
+
+    // Define the columns for the worksheet
+    worksheet.columns = [
+      { header: "Item Rec ID", key: "itemRecId", width: 15 },
+      { header: "Item Name", key: "itemName", width: 25 }, // Column for Item Name
+      { header: "Quantity", key: "qty", width: 10 },
+      { header: "Choki", key: "choki", width: 20 },
+      { header: "Sender", key: "sender", width: 25 },
+      { header: "Unit", key: "unit", width: 15 },
+      { header: "Remark", key: "remark", width: 30 },
+      { header: "Created By", key: "createdByname", width: 25 },
+      { header: "Created At", key: "createdAt", width: 20 },
+    ];
+
+    // Populate the worksheet with data
+    parabhaktiData.forEach((record) => {
+      worksheet.addRow({
+        itemRecId: record.itemRecId,
+        itemName: record.itemDetails ? record.itemDetails.itemName : "N/A", // Add itemName here
+        qty: record.qty,
+        choki: record.choki,
+        sender: record.sender,
+        unit: record.unit,
+        remark: record.remark || "N/A", // Provide default value for null remarks
+        createdByname: record.createdByname ? record.createdByname.name : "N/A", // Use name directly
+        createdAt: record.createdAt ? record.createdAt.toISOString().split("T")[0] : "N/A",
+      });
+    });
+
+    // Set response headers for Excel file download
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="Parabhakti_Report.xlsx"'
+    );
+
+    // Write workbook directly to the response
+    await workbook.xlsx.write(res);
+    res.end(); // Ensure the response is properly closed
+  } catch (error) {
+    console.error("Error generating Excel file:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Something went wrong while generating the Excel file.",
     });
   }
 };
