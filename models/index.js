@@ -32,6 +32,8 @@ db.item = require("./item.js")(sequelize, Sequelize);
 db.itemAss = require("./itemAss.js")(sequelize, Sequelize);
 db.itemRec = require("./itemRec.js")(sequelize, Sequelize);
 db.other = require("./other.js")(sequelize, Sequelize);
+db.parabhakti = require("./parabhakti.js")(sequelize, Sequelize);
+db.itemAssParabhakti = require("./itemAssParabhakti.js")(sequelize, Sequelize);
 
 // Associate models if associations are defined
 Object.values(db).forEach(model => {

@@ -357,6 +357,7 @@ exports.downloadPradeshReceivedItems = async (req, res) => {
 };
 
 exports.addReceiveItem = async (req, res) => {
+    
   const {
     pId,
     dePerson,
@@ -464,16 +465,133 @@ exports.report = async (req, res) => {
       ],
     });
 
+    const flattenedData = pradeshData.map((record) => {
+        const createdByname = record.createdBy ? record.createdByname.name : null;
+        return {
+          ...record.toJSON(), // Convert Sequelize model instance to plain object
+          createdByname,
+        };
+      });
+
     return res.status(201).json({
       status: "success",
       message: "Items received successfully.",
-      data: pradeshData,
+      data: flattenedData,
     });
   } catch (error) {
     console.error("Error Getting data of Report:", error);
     return res.status(500).json({
       status: "error",
       message: "Something went wrong while Getting data of Report.",
+    });
+  }
+};
+
+
+exports.addParabhaktiItems = async (req, res) => {
+  const { items, createdBy } = req.body;
+console.log(req.body)
+  // Validate required input
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({
+      status: "error",
+      message: "Invalid input. Please provide an array of items.",
+    });
+  }
+
+  try {
+    // Array to store entries for bulk insertion
+    const parabhaktiEntries = [];
+
+    // Process each item and prepare data for insertion
+    items.forEach((item) => {
+      if (
+        !item.itemId || 
+        !item.qty || 
+        !item.sender || 
+        !item.unit
+      ) {
+        throw new Error("Missing required fields in one of the items.");
+      }
+
+      parabhaktiEntries.push({
+        itemId: item.itemId,
+        qty: item.qty,
+        choki: item.choki || null,  // Optional field
+        sender: item.sender,
+        unit: item.unit,
+        remark: item.remark || null,  // Optional field
+        createdBy: createdBy || null, // Optional field
+      });
+    });
+
+    // Bulk insert into the `parabhakti` table
+    await db.parabhakti.bulkCreate(parabhaktiEntries);
+
+    return res.status(201).json({
+      status: "success",
+      message: "Parabhakti items added successfully.",
+    });
+  } catch (error) {
+    console.error("Error adding Parabhakti items:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Something went wrong while adding Parabhakti items.",
+    });
+  }
+};
+
+
+exports.getParabhakti = async (req, res) => {
+  try {
+    const parabhaktiData = await db.parabhakti.findAll({
+      attributes: [
+        'itemRecId',
+        'qty',
+        'choki',
+        'sender',
+        'unit',
+        'remark',
+        'createdAt',
+      ],
+      include: [
+        {
+          model: db.itemAssParabhakti,
+          as: 'itemDetails',
+          attributes: ['ItemName'],
+        },
+        {
+          model: db.user,
+          as: 'createdByname',
+          attributes: ['name'],
+        },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+
+    // Flatten the response to bring all attributes to the same level
+    const formattedData = parabhaktiData.map((entry) => ({
+      itemRecId: entry.itemRecId,
+      qty: entry.qty,
+      choki: entry.choki,
+      sender: entry.sender,
+      unit: entry.unit,
+      remark: entry.remark,
+      createdAt: entry.createdAt,
+      itemName: entry.itemDetails?.ItemName || 'N/A',  // Flatten item name
+      createdBy: entry.createdByname?.name || 'N/A',  // Flatten creator name
+    }));
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Data fetched successfully.',
+      items: formattedData,
+    });
+  } catch (error) {
+    console.error('Error fetching Parabhakti data:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Something went wrong while fetching data.',
     });
   }
 };

@@ -9,6 +9,8 @@ module.exports = app => {
     router.get("/downloadPradeshReceivedItems", item.downloadPradeshReceivedItems);
     router.post("/addReceiveItem", item.addReceiveItem);
     router.post("/report", item.report);
+    router.post("/addParabhaktiItems", item.addParabhaktiItems );
+    router.post("/getParabhakti", item.getParabhakti );
     
     app.use("/", router);
 };
