@@ -635,7 +635,7 @@ exports.parabhaktiReport = async (req, res) => {
     return res.status(201).json({
       status: "success",
       message: "Parabhakti items retrieved successfully.",
-      data: parabhaktiData,
+      data: flattenedData,
     });
   } catch (error) {
     console.error("Error retrieving Parabhakti report:", error);
