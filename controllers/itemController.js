@@ -688,7 +688,7 @@ exports.parabhaktiReport = async (req, res) => {
 
     // Fetch pOther data
     const pOtherData = await db.pOther.findAll({
-      attributes: ["pOtherId", "itemName", "qty", "sender", "remark", "unit", "createdBy", "choki"],
+      attributes: ["pOtherId", "itemName", "qty", "sender", "remark", "unit", "createdBy", "choki", "createdAt"],
     });
 
     // Flatten pOther data (if needed)
