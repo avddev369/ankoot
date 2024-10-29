@@ -780,7 +780,7 @@ exports.downloadParabhaktiReport = async (req, res) => {
 
     // Add header row for Parabhakti data
     worksheet.columns = [
-      { header: 'Item Record ID', key: 'itemRecId', width: 15 },
+      { header: 'ID', key: 'itemRecId', width: 15 },
       { header: 'Item Name', key: 'itemName', width: 20 },
       { header: 'Quantity', key: 'qty', width: 10 },
       { header: 'Choki', key: 'choki', width: 15 },
@@ -793,7 +793,10 @@ exports.downloadParabhaktiReport = async (req, res) => {
 
     // Add Parabhakti data rows
     flattenedData.forEach((record) => {
-      worksheet.addRow(record);
+      worksheet.addRow({
+        ...record,
+        itemName: record.itemDetails ? record.itemDetails.itemName : null,
+      });
     });
 
     // Add a separator row
@@ -802,7 +805,7 @@ exports.downloadParabhaktiReport = async (req, res) => {
 
     // Add headers for pOther data
     worksheet.columns = [
-      { header: 'pOther ID', key: 'pOtherId', width: 15 },
+      { header: 'ID', key: 'pOtherId', width: 15 },
       { header: 'Item Name', key: 'itemName', width: 20 },
       { header: 'Quantity', key: 'qty', width: 10 },
       { header: 'Choki', key: 'choki', width: 15 },
