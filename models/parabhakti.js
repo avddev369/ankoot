@@ -38,8 +38,9 @@ module.exports = (sequelize, Sequelize) => {
     parabhakti.associate = (models) => {
         parabhakti.belongsTo(models.itemAssParabhakti, {
             foreignKey: 'itemId', 
-            as: 'itemDetails'
-        });
+            targetKey: 'itemAssId',
+            as: 'itemDetails',
+          });
 
         parabhakti.belongsTo(models.user, {
             foreignKey: 'createdBy', 
