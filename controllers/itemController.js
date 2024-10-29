@@ -578,6 +578,7 @@ exports.addParabhaktiItems = async (req, res) => {
 
 exports.getParabhakti = async (req, res) => {
   try {
+    // Fetch parabhakti data
     const parabhaktiData = await db.parabhakti.findAll({
       attributes: [
         'itemRecId',
@@ -603,8 +604,8 @@ exports.getParabhakti = async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    // Flatten the response to bring all attributes to the same level
-    const formattedData = parabhaktiData.map((entry) => ({
+    // Format the parabhakti data
+    const formattedParabhaktiData = parabhaktiData.map((entry) => ({
       itemRecId: entry.itemRecId,
       qty: entry.qty,
       choki: entry.choki,
@@ -612,14 +613,31 @@ exports.getParabhakti = async (req, res) => {
       unit: entry.unit,
       remark: entry.remark,
       createdAt: entry.createdAt,
-      itemName: entry.itemDetails?.ItemName || 'N/A',  // Flatten item name
-      createdBy: entry.createdByname?.name || 'N/A',  // Flatten creator name
+      itemName: entry.itemDetails?.ItemName || 'N/A', // Flatten item name
+      createdBy: entry.createdByname?.name || 'N/A', // Flatten creator name
     }));
 
+    // Fetch pOther data
+    const pOtherData = await db.pOther.findAll({
+      attributes: ['itemName', 'qty', 'sender', 'unit', 'remark', 'choki'],
+    });
+
+    // Format the pOther data if necessary (optional step)
+    const formattedPOtherData = pOtherData.map((entry) => ({
+      itemName: entry.itemName,
+      qty: entry.qty,
+      sender: entry.sender,
+      choki: entry.choki,
+      unit: entry.unit,
+      remark: entry.remark || 'N/A',
+    }));
+
+    // Return both datasets at the same level
     return res.status(200).json({
       status: 'success',
       message: 'Data fetched successfully.',
-      items: formattedData,
+      parabhaktiItems: formattedParabhaktiData,
+      pOtherItems: formattedPOtherData,
     });
   } catch (error) {
     console.error('Error fetching Parabhakti data:', error);
@@ -632,6 +650,7 @@ exports.getParabhakti = async (req, res) => {
 
 exports.parabhaktiReport = async (req, res) => {
   try {
+    // Fetch parabhakti data
     const parabhaktiData = await db.parabhakti.findAll({
       attributes: [
         "itemRecId",
@@ -641,7 +660,7 @@ exports.parabhaktiReport = async (req, res) => {
         "unit",
         "remark",
         "createdBy",
-        "createdAt"
+        "createdAt",
       ],
       include: [
         {
@@ -657,19 +676,30 @@ exports.parabhaktiReport = async (req, res) => {
       ],
     });
 
-    // Flatten the data for easy access
+    // Flatten parabhakti data for easier access
     const flattenedData = parabhaktiData.map((record) => {
       const createdByname = record.createdByname ? record.createdByname.name : null;
       return {
         ...record.toJSON(), // Convert Sequelize model instance to plain object
-        createdByname,
+        itemName: record.itemDetails?.itemName || "N/A", // Flatten item name
+        createdByname, // Flatten creator name
       };
     });
 
-    return res.status(201).json({
+    // Fetch pOther data
+    const pOtherData = await db.pOther.findAll({
+      attributes: ["pOtherId", "itemName", "qty", "sender", "remark", "unit", "createdBy", "choki"],
+    });
+
+    // Flatten pOther data (if needed)
+    const flattenedPOtherData = pOtherData.map((record) => record.toJSON());
+
+    // Return both datasets at the same level
+    return res.status(200).json({
       status: "success",
-      message: "Parabhakti items retrieved successfully.",
-      data: flattenedData,
+      message: "Parabhakti items and pOther data retrieved successfully.",
+      parabhaktiItems: flattenedData,
+      pOtherItems: flattenedPOtherData,
     });
   } catch (error) {
     console.error("Error retrieving Parabhakti report:", error);
@@ -716,11 +746,39 @@ exports.downloadParabhaktiReport = async (req, res) => {
       };
     });
 
+    // Fetch pOther data
+    const pOtherData = await db.pOther.findAll({
+      attributes: [
+        "pOtherId",
+        "itemName",
+        "qty",
+        "choki",
+        "sender",
+        "unit",
+        "remark",
+        "createdBy",
+        "createdAt",
+      ],
+      include: [
+        {
+          model: db.user,
+          as: "createdByname",
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    // Flatten pOther data
+    const flattenedPOtherData = pOtherData.map((record) => ({
+      ...record.toJSON(),
+      createdByname: record.createdByname ? record.createdByname.name : null,
+    }));
+
     // Create a new workbook and worksheet
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Parabhakti Report');
 
-    // Add header row
+    // Add header row for Parabhakti data
     worksheet.columns = [
       { header: 'Item Record ID', key: 'itemRecId', width: 15 },
       { header: 'Item Name', key: 'itemName', width: 20 },
@@ -733,12 +791,31 @@ exports.downloadParabhaktiReport = async (req, res) => {
       { header: 'Created At', key: 'createdAt', width: 20 },
     ];
 
-    // Add data rows
+    // Add Parabhakti data rows
     flattenedData.forEach((record) => {
-      worksheet.addRow({
-        ...record,
-        itemName: record.itemDetails ? record.itemDetails.itemName : null,
-      });
+      worksheet.addRow(record);
+    });
+
+    // Add a separator row
+    worksheet.addRow([]);
+    worksheet.addRow(['Parabhakti Other Data']);
+
+    // Add headers for pOther data
+    worksheet.columns = [
+      { header: 'pOther ID', key: 'pOtherId', width: 15 },
+      { header: 'Item Name', key: 'itemName', width: 20 },
+      { header: 'Quantity', key: 'qty', width: 10 },
+      { header: 'Choki', key: 'choki', width: 15 },
+      { header: 'Sender', key: 'sender', width: 20 },
+      { header: 'Unit', key: 'unit', width: 10 },
+      { header: 'Remark', key: 'remark', width: 20 },
+      { header: 'Created By', key: 'createdByname', width: 20 },
+      { header: 'Created At', key: 'createdAt', width: 20 },
+    ];
+
+    // Add pOther data rows
+    flattenedPOtherData.forEach((record) => {
+      worksheet.addRow(record);
     });
 
     // Set response headers for file download

@@ -35,5 +35,12 @@ module.exports = (sequelize, Sequelize) => {
         }
     });
 
+    pOther.associate = (models) => {
+        pOther.belongsTo(models.user, {
+            foreignKey: 'createdBy',
+            as: 'createdByname',  // Alias used in query
+        });
+    };
+
     return pOther;
 };
