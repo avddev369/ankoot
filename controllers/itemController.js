@@ -490,7 +490,8 @@ exports.report = async (req, res) => {
 
 exports.addParabhaktiItems = async (req, res) => {
   const { items, createdBy } = req.body;
-  console.log(req.body)
+  console.log(req.body);
+
   // Validate required input
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({
@@ -500,38 +501,71 @@ exports.addParabhaktiItems = async (req, res) => {
   }
 
   try {
-    // Array to store entries for bulk insertion
+    // Arrays to store entries for bulk insertion
     const parabhaktiEntries = [];
+    const otherEntries = [];
 
     // Process each item and prepare data for insertion
     items.forEach((item) => {
-      if (
-        !item.itemId || 
-        !item.qty || 
-        !item.sender || 
-        !item.unit
-      ) {
+      // Check for required fields
+      if (!item.qty || !item.sender || !item.unit) {
         throw new Error("Missing required fields in one of the items.");
       }
 
-      parabhaktiEntries.push({
-        itemId: item.itemId,
+      // Prepare the common entry object
+      const entry = {
         qty: item.qty,
         choki: item.choki || null,  // Optional field
         sender: item.sender,
         unit: item.unit,
         remark: item.remark || null,  // Optional field
         createdBy: createdBy || null, // Optional field
+      };
+
+      if (item.isOther) {
+        // If the item is marked as "other", push to otherEntries
+        otherEntries.push({
+          ...entry,
+          itemName: item.itemName, // Assuming itemName is provided for "other" items
+        });
+      } else {
+        // For regular items, include itemId
+        if (!item.itemId) {
+          throw new Error("Missing itemId for a non-other item.");
+        }
+
+        parabhaktiEntries.push({
+          ...entry,
+          itemId: item.itemId,
+        });
+      }
+    });
+
+    // Start transaction
+    const transaction = await db.sequelize.transaction();
+    
+    try {
+      // Bulk insert into the `parabhakti` table for regular items
+      if (parabhaktiEntries.length) {
+        await db.parabhakti.bulkCreate(parabhaktiEntries, { transaction });
+      }
+
+      // Bulk insert into the `other` table for "other" items
+      if (otherEntries.length) {
+        await db.pOther.bulkCreate(otherEntries, { transaction });
+      }
+
+      // Commit the transaction
+      await transaction.commit();
+
+      return res.status(201).json({
+        status: "success",
+        message: "Parabhakti items added successfully.",
       });
-    });
-
-    // Bulk insert into the `parabhakti` table
-    await db.parabhakti.bulkCreate(parabhaktiEntries);
-
-    return res.status(201).json({
-      status: "success",
-      message: "Parabhakti items added successfully.",
-    });
+    } catch (error) {
+      await transaction.rollback(); // Rollback on error
+      throw error; // Rethrow to handle it in the outer catch
+    }
   } catch (error) {
     console.error("Error adding Parabhakti items:", error);
     return res.status(500).json({
