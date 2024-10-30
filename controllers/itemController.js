@@ -689,11 +689,22 @@ exports.parabhaktiReport = async (req, res) => {
     // Fetch pOther data
     const pOtherData = await db.pOther.findAll({
       attributes: ["pOtherId", "itemName", "qty", "sender", "remark", "unit", "createdBy", "choki", "createdAt"],
+      include: [
+        {
+          model: db.user,
+          as: "createdByname",
+          attributes: ["name"],
+        },
+      ],
     });
 
-    // Flatten pOther data (if needed)
-    const flattenedPOtherData = pOtherData.map((record) => record.toJSON());
-
+    const flattenedPOtherData = pOtherData.map((record) => {
+      const createdByname = record.createdByname ? record.createdByname.name : null;
+      return {
+        ...record.toJSON(), 
+        createdByname, 
+      };
+    });
     // Return both datasets at the same level
     return res.status(200).json({
       status: "success",
