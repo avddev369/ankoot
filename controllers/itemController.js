@@ -791,7 +791,7 @@ exports.downloadParabhaktiReport = async (req, res) => {
 
     // Add header row for Parabhakti data
     worksheet.columns = [
-      { header: 'ID', key: 'itemRecId', width: 15 },
+      { header: 'Sr No', key: 'srNo', width: 10 },
       { header: 'Item Name', key: 'itemName', width: 20 },
       { header: 'Quantity', key: 'qty', width: 10 },
       { header: 'Choki', key: 'choki', width: 15 },
@@ -802,34 +802,24 @@ exports.downloadParabhaktiReport = async (req, res) => {
       { header: 'Created At', key: 'createdAt', width: 20 },
     ];
 
-    // Add Parabhakti data rows
-    flattenedData.forEach((record) => {
+    // Add Parabhakti data rows with serial numbers
+    flattenedData.forEach((record, index) => {
       worksheet.addRow({
+        srNo: index + 1,
         ...record,
-        itemName: record.itemDetails ? record.itemDetails.itemName : null,
       });
     });
 
     // Add a separator row
     worksheet.addRow([]);
-    worksheet.addRow(['Parabhakti Other Data']);
+    worksheet.addRow(['Parabhakti Other Data']); // Header for pOther section
 
-    // Add headers for pOther data
-    worksheet.columns = [
-      { header: 'ID', key: 'pOtherId', width: 15 },
-      { header: 'Item Name', key: 'itemName', width: 20 },
-      { header: 'Quantity', key: 'qty', width: 10 },
-      { header: 'Choki', key: 'choki', width: 15 },
-      { header: 'Sender', key: 'sender', width: 20 },
-      { header: 'Unit', key: 'unit', width: 10 },
-      { header: 'Remark', key: 'remark', width: 20 },
-      { header: 'Created By', key: 'createdByname', width: 20 },
-      { header: 'Created At', key: 'createdAt', width: 20 },
-    ];
-
-    // Add pOther data rows
-    flattenedPOtherData.forEach((record) => {
-      worksheet.addRow(record);
+    // Add pOther data rows with continued serial numbers
+    flattenedPOtherData.forEach((record, index) => {
+      worksheet.addRow({
+        srNo: flattenedData.length + index + 1, // Continuing Sr No from Parabhakti data
+        ...record,
+      });
     });
 
     // Set response headers for file download
