@@ -10,7 +10,7 @@ app.use(cors());
 
 
 const allowedOrigins = [
-    'http://27.116.52.24:8053',
+    'http://api.hpparam.com:8053',
     'http://localhost:8053'
   ];
   
